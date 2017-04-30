@@ -27,10 +27,11 @@ def create_cache(path, hexfile):
     if not xbmcvfs.exists(CACHEFOLDER):
         xbmcvfs.mkdir(CACHEFOLDER)
     # remove old cache files
-    dirs, files = xbmcvfs.listdir(CACHEFOLDER)
-    for item in files:
-        if item != 'settings.xml':
-            xbmcvfs.delete(os.path.join(CACHEFOLDER,item))
+    # TODO: commented out for unsa as we want to keep our cache files
+    # dirs, files = xbmcvfs.listdir(CACHEFOLDER)
+    # for item in files:
+    #     if item != 'settings.xml':
+    #         xbmcvfs.delete(os.path.join(CACHEFOLDER,item))
     if images:
         # create index file
         try:

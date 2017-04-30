@@ -122,3 +122,59 @@ msgstr ""
 msgctxt "#30029"
 msgid "Display background picture"
 msgstr ""
+
+msgctxt "#30052"
+msgid "Use images from UMSA MAME Surfer Add-On"
+msgstr ""
+
+msgctxt "#30053"
+msgid "UMSA MAME Surfer"
+msgstr ""
+
+msgctxt "#30054"
+msgid "Rows to show. Between"
+msgstr ""
+
+msgctxt "#30055"
+msgid "and"
+msgstr ""
+
+msgctxt "#30056"
+msgid "Show game info"
+msgstr ""
+
+msgctxt "#30057"
+msgid "How to show images?"
+msgstr ""
+
+msgctxt "#30058"
+msgid "Standard"
+msgstr ""
+
+msgctxt "#30059"
+msgid "Wall"
+msgstr ""
+
+msgctxt "#30060"
+msgid "Random"
+msgstr ""
+
+msgctxt "#30061"
+msgid "Show tiny upper left music info"
+msgstr ""
+
+msgctxt "#30062"
+msgid "Wall Options"
+msgstr ""
+
+msgctxt "#30063"
+msgid "Snaps or Titles?"
+msgstr ""
+
+msgctxt "#30064"
+msgid "How much free wall tiles?"
+msgstr ""
+
+msgctxt "#30065"
+msgid "Use Python Image Library?"
+msgstr ""

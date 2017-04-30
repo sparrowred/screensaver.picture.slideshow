@@ -159,6 +159,64 @@
 				<shadowcolor>C0000000</shadowcolor>
 			</control>
 			<control type="group">
+				<control type="image" id="103">
+					<description>background bar (for better font reading)</description>
+					<posx>0</posx>
+					<posy>655</posy>
+					<width>1280</width>
+					<height>50</height>
+					<colordiffuse>60FFFFFF</colordiffuse>
+					<texture>screensaver-black.png</texture>
+					<aspectratio>scale</aspectratio>
+				</control>
+				<control type="image" id="105">
+					<description>system</description>
+					<posx>1190</posx>
+					<posy>650</posy>
+					<width>80</width>
+					<height>60</height>
+					<texture></texture>
+					<aspectratio scalediffuse="true" alignx="right" aligny="center">keep</aspectratio>
+				</control>
+				<control type="image" id="104">
+					<description>ingame snap 4to3</description>
+					<posx>10</posx>
+					<posy>570</posy>
+					<width>186</width>
+					<height>140</height>
+					<fadetime>200</fadetime>
+					<visible>!Player.HasAudio | !String.IsEqual(Window.Property(SlideView.Music),show)</visible>
+				</control>
+				<control type="image" id="106">
+						<description>ingame snap 3to4</description>
+						<posx>10</posx>
+						<posy>524</posy>
+						<width>140</width>
+						<height>186</height>
+						<fadetime>200</fadetime>
+						<visible>!Player.HasAudio | !String.IsEqual(Window.Property(SlideView.Music),show)</visible>
+				</control>
+				<control type="image" id="107">
+						<description>ingame snap keep</description>
+						<posx>10</posx>
+						<posy>570</posy>
+						<width>279</width>
+						<height>140</height>
+						<fadetime>200</fadetime>
+						<aspectratio align="left" aligny="bottom">keep</aspectratio>
+						<visible>!Player.HasAudio | !String.IsEqual(Window.Property(SlideView.Music),show)</visible>
+				</control>
+				<control type="label" id="102">
+					<description>name and year, maker (category)</description>
+					<posx>1180</posx>
+					<posy>652</posy>
+					<width min="100" max="800">auto</width>
+					<font>font13</font>
+					<textcolor>lightgreen</textcolor>
+					<align>right</align>
+				</control>
+			</control>
+			<control type="group">
 				<posx>20</posx>
 				<posy>575</posy>
 				<animation effect="fade" start="80" end="80" time="0" condition="true">Conditional</animation>

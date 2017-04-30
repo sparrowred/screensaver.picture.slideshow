@@ -53,6 +53,9 @@ class Screensaver(xbmcgui.WindowXMLDialog):
         self._get_vars()
         # get addon settings
         self._get_settings()
+        # settings for umsa
+        if self.slideshow_umsa == 'true':
+            self._set_umsa()
         # get the effectslowdown value from the current skin
         effectslowdown = self._get_animspeed()
         # use default if we couldn't find the effectslowdown value
@@ -86,6 +89,7 @@ class Screensaver(xbmcgui.WindowXMLDialog):
         self.slideshow_path   = ADDON.getSetting('path')
         self.slideshow_effect = ADDON.getSetting('effect')
         self.slideshow_time   = int(ADDON.getSetting('time'))
+        self.slideshow_umsa   = ADDON.getSetting('umsa')
         # convert float to hex value usable by the skin
         self.slideshow_dim    = hex(int('%.0f' % (float(100 - int(ADDON.getSetting('level'))) * 2.55)))[2:] + 'ffffff'
         self.slideshow_random = ADDON.getSetting('random')
@@ -127,6 +131,208 @@ class Screensaver(xbmcgui.WindowXMLDialog):
         if self.slideshow_bg == 'true':
             self._set_prop('Background', 'show')
 
+    def _set_umsa(self):
+        
+        # for usage in combination with script.umame.mame.surfer
+        #
+        # TODO:
+        #
+        # - cool would be to fade out and in so the background can be seen
+        # - also cool: in wall mode make one position a video
+        # - even more cool: make screensaver in umame
+        #  
+        # - get all folders from progetto path
+        #   - artwork: artworkpreview, cabinets, covers, cpanel, flyers, marquees
+        #   - snap: snap, titles
+        #   - others: cabdevs, devices, icons, manuals, pcb, videosnaps
+        #
+        # - count evspace and ehspace together / 2 and then calc again with new space
+        #   see 4 rows
+        
+        # settings
+        self.umsa_musicinfo = ADDON.getSetting('umsa_musicinfo')
+        self.umsa_random    = ADDON.getSetting('umsa_random')
+        self.umsa_time      = int(ADDON.getSetting('umsa_time'))
+        self.umsa_type      = int(ADDON.getSetting('umsa_type'))
+        rows                = int(ADDON.getSetting('umsa_rows'))
+        rows_b              = int(ADDON.getSetting('umsa_rows_b'))
+        titles              = ADDON.getSetting('umsa_titles')
+        umsa_free           = int(ADDON.getSetting('umsa_free'))
+        # will be extended later according to type
+        self.slideshow_path = 'multipath://'
+        
+        self.umsa_info = False
+        if ADDON.getSetting('umsa_info') == 'true':
+            self.umsa_info = True
+            
+        pil = False
+        if ADDON.getSetting('umsa_pil') == "true":
+            pil = True
+            
+        # import modules from script.umsa.mame.surfer
+        sys.path.append(
+            xbmc.translatePath(
+                'special://home/addons/script.umsa.mame.surfer/resources/lib'
+                )
+            )
+        # image check init
+        from utilmod2 import Check
+        self.umsa_util = Check( pil )
+        # db init        
+        from dbmod import DBMod
+        self.umsa_db = DBMod(
+            xbmc.translatePath(
+                'special://profile/addon_data/script.umsa.mame.surfer/'
+            )
+        )
+        
+        # get skin controls for info label
+        # TODO create info controls here when umsa_info
+        # so can be deleted from skin
+        self.umsa_label = self.getControl(102)
+        
+        # get settings from umsa addon for paths
+        umsa_addon = xbmcaddon.Addon('script.umsa.mame.surfer')
+        self.umsa_progetto_path = umsa_addon.getSetting('progetto')
+        aratio = umsa_addon.getSetting('aspectratio')
+        ar_norm = 1.7777 # 16:9
+        ar_x = 1.7777
+        
+        # set correct aspect ratio for snapshots (bottom left picture)
+        # for everything which is not 16:9
+        if aratio == "16:10":
+            ar_x = 1.6
+        elif aratio == "5:4":
+            ar_x = 1.25
+        elif aratio == "4:3":
+            ar_x = 1.3333
+        
+        # correct aspect ratio for snap in bottom left position
+        _4to3 = self.getControl(104).getWidth()
+        _3to4 = self.getControl(106).getWidth()
+        self.getControl(104).setWidth(int(_4to3 /ar_x*ar_norm)) # 4:3
+        self.getControl(106).setWidth(int(_3to4 *ar_norm/ar_x)) # 3:4
+        
+        # type random = set standard or wall
+        if self.umsa_type == 2:
+            self.umsa_type = random.randint(0,1)
+        
+        # type wall
+        if self.umsa_type == 1:
+            # create multipath
+            spath = ["snap"]
+            if titles == "Both":
+                spath.append("titles")
+            elif titles == "Titles":
+                spath = ["titles"]
+            for i in spath:
+                self.slideshow_path = self.slideshow_path + os.path.join(
+                        self.umsa_progetto_path, i
+                    ).replace( '/' , '%2f' ) + '%2f/'
+            
+            # set view time from umsa wall time option
+            self.slideshow_time = self.umsa_time
+            
+            # generate image and position list
+            # TODO: make vars from spacing and other numbers
+            x_space = 20
+            y_space = 10
+            x_max   = 1280
+            y_max   = 660
+            
+            # how many rows
+            if rows < rows_b:
+                rows = random.randint( rows , rows_b )
+            else:
+                rows = random.randint( rows_b , rows )
+            # width
+            self.umsa_width = ( x_max - ( rows + 1 ) * x_space ) / rows
+            ehspace = ( x_max - self.umsa_width * rows ) / ( rows + 1 )
+            # height
+            self.umsa_height = int( self.umsa_width / 1.3333 / ar_norm * ar_x )
+            # TODO: check spacing on big screen
+            # idea is that info at the bottom is always visible
+            cols = ( y_max - 20) / self.umsa_height
+            evspace = ( y_max - self.umsa_height * cols ) / ( cols + 1 )
+            # calculate width and x for vertical images
+            self.umsa_vert_width = int(
+                self.umsa_height / 1.3333 * ar_norm / ar_x
+            )
+            self.umsa_vert_x = int(
+                ( self.umsa_width - self.umsa_vert_width ) / 2 )
+            # create lists
+            self.umsa_wallpics = rows * cols
+            self.umsa_wallpos = range( self.umsa_wallpics )
+            # generate image list
+            x = x_space
+            y = y_space
+            self.umsa_wall = []
+            for i in range(cols):
+                for j in range(rows):
+                    self.umsa_wall.append(
+                        xbmcgui.ControlImage(
+                            x,
+                            y,
+                            self.umsa_width,
+                            self.umsa_height,
+                            ''
+                        )
+                    )
+                    x += self.umsa_width + x_space
+                y += self.umsa_height + evspace
+                x = x_space
+                
+            # add images to window
+            for i in self.umsa_wall:
+                self.addControl(i)
+            # shuffle position list
+            random.shuffle(self.umsa_wallpos)
+            # how many free
+            if umsa_free == 0:
+                self.umsa_freelist = 0
+            else:
+                self.umsa_free = (
+                    self.umsa_wallpics
+                    - ( self.umsa_wallpics * umsa_free / 100 )
+                )
+                #print "HOW MANY FREE: %s" % (self.umsa_free)
+                self.umsa_freelist = []
+        # type standard
+        else:
+            # multipath for progetto artwork
+            for i in [
+                "artpreview",
+                "cabinets",
+                "covers",
+                "cpanel",
+                "flyers",
+                "marquees"
+            ]:
+                self.slideshow_path = self.slideshow_path + os.path.join(
+                    self.umsa_progetto_path, i
+                ).replace( '/' , '%2f' ) + '%2f/'
+            # TODO remove before release
+            self.slideshow_path = self.slideshow_path + '%2fmedia%2fgames%2fmame%2fextras%2fprojectmess%2f/'
+            
+        # read last games shown by screensaver
+        self.lastgames = []
+        try:
+            fobj = None
+            fobj = open(xbmc.translatePath(
+                'special://profile/addon_data/script.umsa.mame.surfer/lastsaver.txt'
+                ), 'r'
+            )
+            if fobj:
+                for line in fobj:
+                   self.lastgames.append(line.strip())
+        except:
+            pass
+        if len(self.lastgames) != 50:
+            while len(self.lastgames) < 50:
+                self.lastgames.insert( 0 , '' )
+                
+        return
+    
     def _start_show(self, items):
         # we need to start the update thread after the deep copy of self.items finishes
         thread = img_update(data=self._get_items)
@@ -144,7 +350,12 @@ class Screensaver(xbmcgui.WindowXMLDialog):
                 if self.slideshow_type == '2' and not xbmcvfs.exists(img[0]):
                     continue
                 # add image to gui
-                cur_img.setImage(img[0],False)
+                # only when not in umsa mode or when umsa type is standard
+                if self.umsa_type == 0 or self.slideshow_umsa == 'false':
+                    cur_img.setImage(img[0],False)
+                # otherwise wall mode: goto next image when not valid
+                elif not self.umsa_util.check_snapshot(img[0]):
+                    continue
                 # add background image to gui
                 if self.slideshow_scale == 'false' and self.slideshow_bg == 'true':
                     if order[0] == 1:
@@ -255,6 +466,138 @@ class Screensaver(xbmcgui.WindowXMLDialog):
                             ROOT, FOLDER = os.path.split(os.path.dirname(img[0]))
                             NAME = FOLDER + ' / ' + img[1]
                     self.namelabel.setLabel(NAME)
+                    
+                # umsa slideshow actions
+                if self.slideshow_umsa == 'true':
+                    
+                    # split image path and filename
+                    FILENAME, EXT = os.path.splitext(os.path.basename(img[0]))
+                    ROOT, DIRNAME = os.path.split(os.path.dirname(img[0]))
+                    
+                    # get infos from db                    
+                    name, swl, info, systempic, snapshot, snaporientation = self.umsa_db.get_info_by_filename(
+                        FILENAME,
+                        DIRNAME,
+                        self.umsa_progetto_path,
+                        xbmc.translatePath(
+                            'special://home/addons/script.umsa.mame.surfer/resources/skins/Default/media/'
+                        )
+                    )
+                    
+                    # remember last one, so we can save the last games for umsa
+                    if swl:
+                        self.lastgames.append( "%s,%s" % (FILENAME, swl))
+                        del self.lastgames[0]
+                        
+                    if self.umsa_info:
+                        # set info into label
+                        # TODO: split shown info into 2 labels for alignment
+                        self.umsa_label.setLabel(
+                            '[B]' + name + '[/B][CR]' + info
+                        )
+                        # show system picture
+                        if systempic:
+                            self.getControl(105).setImage( systempic , False )
+                        else:
+                            self.getControl(105).setImage( '' )
+                        # if snapshot and not wall mode and image is ok
+                        if ( snapshot
+                             and self.umsa_type == 0
+                             and self.umsa_util.check_snapshot(snapshot)
+                            ):
+                            if snaporientation == 'horizontal':
+                                snapctrl = 104
+                                self.getControl(106).setImage('')
+                                self.getControl(107).setImage('')
+                            elif snaporientation == 'vertical':
+                                snapctrl = 106
+                                self.getControl(104).setImage('')
+                                self.getControl(107).setImage('')
+                            elif snaporientation == 'keep':
+                                snapctrl = 107
+                                self.getControl(106).setImage('')
+                                self.getControl(104).setImage('')
+                            self.getControl(snapctrl).setImage( snapshot, False )
+                        # no snapshot = clear all 3 snap views
+                        else:
+                            self.getControl(104).setImage('')
+                            self.getControl(106).setImage('')
+                            self.getControl(107).setImage('')
+                        
+                    # type = wall
+                    if self.umsa_type == 1:
+                        # refill position list when empty
+                        if len(self.umsa_wallpos) == 0:
+                            self.umsa_wallpos = range(self.umsa_wallpics)
+                            random.shuffle(self.umsa_wallpos)
+                            # dont let the last entry in list
+                            # be the last position choosen
+                            while self.umsa_wallpos[-1] == self.lastpos:
+                                random.shuffle(self.umsa_wallpos)
+                        # pop new position from list
+                        self.lastpos = self.umsa_wallpos.pop()
+                        # delete one of the last pics
+                        if self.umsa_freelist != 0:
+                            self.umsa_freelist.append(self.lastpos)
+                            # print "IMAGELIST:"
+                            # print self.umsa_wallpos
+                            # print "FREELIST:"
+                            # print self.umsa_freelist
+                            if len(self.umsa_freelist) == self.umsa_free:
+                                tofree = self.umsa_freelist.pop(
+                                    random.randint(
+                                        0 , len( self.umsa_freelist ) / 2
+                                    )
+                                )
+                                # print "TO MAKE FREE: %s" % (tofree)
+                                # insert actual to be cleaned image pos
+                                # to umsa_wallpos
+                                self.umsa_wallpos.insert( 0 , tofree )
+                                # make image empty
+                                self.removeControl( self.umsa_wall[tofree] )
+                                self.umsa_wall[tofree].setImage('')
+                                self.addControl( self.umsa_wall[tofree] )
+                        # check if image is horizontal, vertical
+                        # or aspect ratio must be keeped
+                        # get image position
+                        x , y = self.umsa_wall[self.lastpos].getPosition()
+                        # width not standard =
+                        # image was vertical > correct x position
+                        if self.umsa_wall[self.lastpos].getWidth() != self.umsa_width:
+                            x = x - self.umsa_vert_x
+                        # remove image control
+                        self.removeControl(self.umsa_wall[self.lastpos])
+                        # create new image control for horz, vert or ar=keep
+                        if snaporientation == 'horizontal':
+                            self.umsa_wall[self.lastpos] = xbmcgui.ControlImage(
+                                x,
+                                y,
+                                self.umsa_width,
+                                self.umsa_height,
+                                ''
+                            )
+                        elif snaporientation == 'vertical':
+                            self.umsa_wall[self.lastpos] = xbmcgui.ControlImage(
+                                x + self.umsa_vert_x,
+                                y,
+                                self.umsa_vert_width,
+                                self.umsa_height,
+                                ''
+                            )
+                        elif snaporientation == 'keep':
+                            self.umsa_wall[self.lastpos] = xbmcgui.ControlImage(
+                                x,
+                                y,
+                                self.umsa_width,
+                                self.umsa_height,
+                                '',
+                                2
+                            )
+                        # set image
+                        self.umsa_wall[self.lastpos].setImage( img[0] , False )
+                        # add new image control
+                        self.addControl( self.umsa_wall[self.lastpos] )
+                        
                 # set animations
                 if self.slideshow_effect == '0':
                     # add slide anim
@@ -418,6 +761,28 @@ class Screensaver(xbmcgui.WindowXMLDialog):
     def _exit(self):
         # exit when onScreensaverDeactivated gets called
         self.stop = True
+
+        # exit for umsa
+        if self.slideshow_umsa == 'true':
+            
+            # close db, doesn't work as sometimes after this a select is done
+            #self.umsa_db.close()
+            
+            # write last 50 games to file
+            try:
+                fobj = None
+                fobj = open(
+                    xbmc.translatePath(
+                        'special://profile/addon_data/script.umsa.mame.surfer/lastsaver.txt'
+                    ),
+                    'w'
+                )
+                if fobj:
+                    fobj.write( '\n'.join(self.lastgames) )
+                    fobj.close()
+            except:
+                pass
+         
         # clear our properties on exit
         self._clear_prop('Slide1')
         self._clear_prop('Slide2')
